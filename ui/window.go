@@ -47,7 +47,9 @@ func (pw *Visualizer) run(s screen.Screen) {
 	}
 
 	w, err := s.NewWindow(&screen.NewWindowOptions{
-		Title: pw.Title,
+		Title:  pw.Title,
+		Width:  800, // Set the initial window width to 800
+		Height: 800, // Set the initial window height to 800
 	})
 	if err != nil {
 		log.Fatal("Failed to initialize the app window:", err)
@@ -107,23 +109,25 @@ func detectTerminate(e any) bool {
 func (pw *Visualizer) handleEvent(e any, t screen.Texture) {
 	switch e := e.(type) {
 
-	case size.Event: // Оновлення даних про розмір вікна.
+	case size.Event: // Update window size data.
 		pw.sz = e
 
 	case error:
 		log.Printf("ERROR: %s", e)
 
 	case mouse.Event:
-		if t == nil {
-			// TODO: Реалізувати реакцію на натискання кнопки миші.
+		if t == nil && e.Button == mouse.ButtonLeft && e.Direction == mouse.DirPress {
+			// Move the figure to the coords of a mouse click
+			pw.pos = image.Rect(int(e.X)-100, int(e.Y)-100, int(e.X)+100, int(e.Y)+100)
+			pw.w.Send(paint.Event{})
 		}
 
 	case paint.Event:
-		// Малювання контенту вікна.
+		// Draw window content.
 		if t == nil {
 			pw.drawDefaultUI()
 		} else {
-			// Використання текстури отриманої через виклик Update.
+			// Use texture received through the Update call.
 			pw.w.Scale(pw.sz.Bounds(), t, t.Bounds(), draw.Src, nil)
 		}
 		pw.w.Publish()
@@ -131,12 +135,26 @@ func (pw *Visualizer) handleEvent(e any, t screen.Texture) {
 }
 
 func (pw *Visualizer) drawDefaultUI() {
-	pw.w.Fill(pw.sz.Bounds(), color.Black, draw.Src) // Фон.
+	pw.w.Fill(pw.sz.Bounds(), color.Black, draw.Src) // Background.
 
-	// TODO: Змінити колір фону та додати відображення фігури у вашому варіанті.
+	// Render yellow cross figure.
+	pw.drawYellowCross()
 
-	// Малювання білої рамки.
+	// Draw white border.
 	for _, br := range imageutil.Border(pw.sz.Bounds(), 10) {
 		pw.w.Fill(br, color.White, draw.Src)
 	}
+}
+
+func (pw *Visualizer) drawYellowCross() {
+	crossColor := color.RGBA{255, 255, 0, 255}
+	lineWidth := 10
+
+	// Horizontal line of the cross.
+	horizontalLine := image.Rect(pw.pos.Min.X, pw.pos.Min.Y+(pw.pos.Dy()/2)-lineWidth/2, pw.pos.Max.X, pw.pos.Min.Y+(pw.pos.Dy()/2)+lineWidth/2)
+	pw.w.Fill(horizontalLine, crossColor, draw.Src)
+
+	// Vertical line of the cross.
+	verticalLine := image.Rect(pw.pos.Min.X+(pw.pos.Dx()/2)-lineWidth/2, pw.pos.Min.Y, pw.pos.Min.X+(pw.pos.Dx()/2)+lineWidth/2, pw.pos.Max.Y)
+	pw.w.Fill(verticalLine, crossColor, draw.Src)
 }
