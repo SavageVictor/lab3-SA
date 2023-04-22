@@ -27,13 +27,26 @@ type Visualizer struct {
 
 	sz  size.Event
 	pos image.Rectangle
+
+	WindowWidth  int
+	WindowHeight int
 }
 
 func (pw *Visualizer) Main() {
 	pw.tx = make(chan screen.Texture)
 	pw.done = make(chan struct{})
-	pw.pos.Max.X = 200
-	pw.pos.Max.Y = 200
+
+	// Set default window size if not set.
+	if pw.WindowWidth == 0 {
+		pw.WindowWidth = 800
+	}
+	if pw.WindowHeight == 0 {
+		pw.WindowHeight = 800
+	}
+
+	// Set the initial position of the cross to the center of the window.
+	pw.pos = image.Rect(pw.WindowWidth/2-100, pw.WindowHeight/2-100, pw.WindowWidth/2+100, pw.WindowHeight/2+100)
+
 	driver.Main(pw.run)
 }
 
@@ -48,8 +61,8 @@ func (pw *Visualizer) run(s screen.Screen) {
 
 	w, err := s.NewWindow(&screen.NewWindowOptions{
 		Title:  pw.Title,
-		Width:  800, // Set the initial window width to 800
-		Height: 800, // Set the initial window height to 800
+		Width:  pw.WindowWidth,  // Set the initial window width
+		Height: pw.WindowHeight, // Set the initial window height
 	})
 	if err != nil {
 		log.Fatal("Failed to initialize the app window:", err)
