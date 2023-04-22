@@ -24,7 +24,10 @@ func main() {
 	opLoop.Receiver = &pv
 
 	go func() {
-		http.Handle("/", lang.HttpHandler(&opLoop, &parser))
+		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			http.ServeFile(w, r, "index.html")
+		})
+		http.Handle("/parse", lang.HttpHandler(&opLoop, &parser))
 		_ = http.ListenAndServe("localhost:17000", nil)
 	}()
 

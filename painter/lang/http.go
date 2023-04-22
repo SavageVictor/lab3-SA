@@ -13,6 +13,11 @@ import (
 // операцій у painter.Loop.
 func HttpHandler(loop *painter.Loop, p *Parser) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" {
+			http.ServeFile(rw, r, "index.html")
+			return
+		}
+
 		var in io.Reader = r.Body
 		if r.Method == http.MethodGet {
 			in = strings.NewReader(r.URL.Query().Get("cmd"))
