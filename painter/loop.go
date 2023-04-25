@@ -6,51 +6,72 @@ import (
 	"golang.org/x/exp/shiny/screen"
 )
 
-// Receiver отримує текстуру, яка була підготовлена в результаті виконання команд у циелі подій.
 type Receiver interface {
 	Update(t screen.Texture)
 }
 
-// Loop реалізує цикл подій для формування текстури отриманої через виконання операцій отриманих з внутрішньої черги.
 type Loop struct {
-	Receiver Receiver
-
-	next screen.Texture // текстура, яка зараз формується
-	prev screen.Texture // текстура, яка була відправленя останнього разу у Receiver
-
-	mq messageQueue
+	Receiver   Receiver
+	next       screen.Texture
+	prev       screen.Texture
+	mq         messageQueue
+	operations []Operation // Added a slice to store past operations
 }
 
-var size = image.Pt(400, 400)
+var size = image.Pt(800, 800)
 
-// Start запускає цикл подій. Цей метод потрібно запустити до того, як викликати на ньому будь-які інші методи.
 func (l *Loop) Start(s screen.Screen) {
 	l.next, _ = s.NewTexture(size)
 	l.prev, _ = s.NewTexture(size)
 
-	// TODO: ініціалізувати чергу подій.
-	// TODO: запустити рутину обробки повідомлень у черзі подій.
+	l.mq = newMessageQueue()
+
+	go l.processMessages()
 }
 
-// Post додає нову операцію у внутрішню чергу.
 func (l *Loop) Post(op Operation) {
-	// TODO: реалізувати додавання операції в чергу. Поточна імплементація
-	update := op.Do(l.next)
-	if update {
-		l.Receiver.Update(l.next)
-		l.next, l.prev = l.prev, l.next
+	l.operations = append(l.operations, op) // Add new operation to the operations slice
+	l.mq.push(op)
+}
+
+func (l *Loop) StopAndWait() {
+	close(l.mq.queue)
+}
+
+func (l *Loop) processMessages() {
+	for {
+		op := l.mq.pull()
+		if op == nil {
+			continue
+		}
+
+		// Apply all previous operations
+		for _, pastOp := range l.operations {
+			pastOp.Do(l.next)
+		}
+
+		update := op.Do(l.next)
+		if update {
+			l.Receiver.Update(l.next)
+			l.next, l.prev = l.prev, l.next
+		}
 	}
 }
 
-// StopAndWait сигналізує
-func (l *Loop) StopAndWait() {
-
-}
-
-// TODO: реалізувати власну чергу повідомлень.
 type messageQueue struct {
+	queue chan Operation
 }
 
-func (mq *messageQueue) push(op Operation) {}
+func newMessageQueue() messageQueue {
+	return messageQueue{
+		queue: make(chan Operation, 100),
+	}
+}
 
-func (mq *messageQueue) pull() Operation { return nil }
+func (mq *messageQueue) push(op Operation) {
+	mq.queue <- op
+}
+
+func (mq *messageQueue) pull() Operation {
+	return <-mq.queue
+}
