@@ -5,10 +5,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Command Parser</title>
 	<script>
-		function sendCommand() {
-			const inputField = document.getElementById("command-input");
-			const command = inputField.value;
-
+		function sendCommand(command) {
 			fetch("/parse", {
 				method: "POST",
 				headers: {
@@ -17,21 +14,57 @@
 				body: `cmd=${encodeURIComponent(command)}`
 			})
 			.then(response => {
+				const responseField = document.getElementById("response-field");
 				if (response.ok) {
-					alert("Command sent successfully");
+					responseField.value = "Command sent successfully";
 				} else {
-					alert("Error: " + response.statusText);
+					responseField.value = "Error: " + response.statusText;
 				}
 			})
 			.catch(error => {
-				alert("Error: " + error);
+				const responseField = document.getElementById("response-field");
+				responseField.value = "Error: " + error;
 			});
+		}
+
+		function sendCustomCommand() {
+			const inputField = document.getElementById("command-input");
+			const command = inputField.value;
+			sendCommand(command);
+		}
+
+		function sendCommandList(commandList) {
+			for (const command of commandList) {
+				sendCommand(command);
+			}
+		}
+
+		function startRepeatingCommandList() {
+    	const commandList = ['update'];
+    	let moveCoords = 0.1;
+    	sendCommandList(['figure 0.1 0.1', 'update'])
+    	intervalId = setInterval(() => {
+        moveCoords += 0.1;
+        const newCommandList = [`move ${moveCoords.toFixed(1)} ${moveCoords.toFixed(1)}`, ...commandList];
+        sendCommandList(newCommandList);
+    		}, 1000);
+		}
+
+		function cancelRepeatingCommandList() {
+			clearInterval(intervalId);
 		}
 	</script>
 </head>
 <body>
 	<h1>Enter Command</h1>
 	<input type="text" id="command-input">
-	<button onclick="sendCommand()">Send Command</button>
+	<button onclick="sendCustomCommand()">Send Command</button>
+	<br>
+	<button onclick="sendCommandList(['green', 'bgrect 0.1 0.1 0.9 0.9', 'update'])">Green outline</button>
+	<button onclick="startRepeatingCommandList()">Move figure in a diagonal line</button>
+	<button onclick="cancelRepeatingCommandList()">Stop</button>
+	<br><br>
+	<label for="response-field">Response:</label>
+	<input type="text" id="response-field" readonly>
 </body>
 </html>
