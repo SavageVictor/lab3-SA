@@ -23,14 +23,14 @@ func HttpHandler(loop *painter.Loop, p *Parser, figureList *painter.FigureList) 
 			in = strings.NewReader(r.URL.Query().Get("cmd"))
 		}
 
-		err := p.Parse(in, loop, figureList)
+		cmds, err := p.Parse(in, figureList)
 		if err != nil {
 			log.Printf("Bad script: %s", err)
 			rw.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		//loop.Post(painter.OperationList(cmds))
+		loop.Post(painter.OperationList(cmds))
 		rw.WriteHeader(http.StatusOK)
 	})
 }
